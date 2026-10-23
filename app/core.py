@@ -14,6 +14,8 @@ DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://app_rw:devpass@localhost:55432/postgres"
 )
 SESSION_SECRET = os.environ.get("SESSION_SECRET", "dev-secret-change-me").encode()
+if os.environ.get("VERCEL") and SESSION_SECRET == b"dev-secret-change-me":
+    raise RuntimeError("Set SESSION_SECRET in Vercel before deploying")
 SESSION_COOKIE = "dm_session"
 SESSION_HOURS = 12
 SCRYPT_N = 2**14

@@ -133,8 +133,9 @@ def login_submit(request: Request, email: str = Form(...), password: str = Form(
         return page(request, "login.html", error="Invalid email or password.")
     cookie = make_session(user["user_id"], user["institute_id"], user["role"], user["name"], user["institute_name"])
     resp = RedirectResponse("/dashboard", status_code=303)
+    https = request.url.scheme == "https" or request.headers.get("x-forwarded-proto") == "https"
     resp.set_cookie(SESSION_COOKIE, cookie, httponly=True, samesite="lax",
-                    max_age=SESSION_HOURS * 3600)
+                    secure=https, max_age=SESSION_HOURS * 3600)
     return resp
 
 

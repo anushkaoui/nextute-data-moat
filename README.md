@@ -21,6 +21,8 @@ Built for **Nextute × Finance Club IIT Patna — Case B: The Data Moat (2026)**
 
 ```bash
 python3 -m pip install -r requirements.txt
+# for tests/playwright:
+# python3 -m pip install -r requirements-dev.txt
 
 # Postgres 16 (already running in the development environment)
 docker run --name dm-pg -e POSTGRES_PASSWORD=postgres -p 55432:5432 -d postgres:16
@@ -97,6 +99,10 @@ docs/              validation report, deck, business plan, Q&A
 - Single-node pilot architecture; no real institute data has been used.
 - The optional LLM path is off; reports use the reviewed template and fact-lock validator.
 
+## Deploy on Vercel
+
+See `docs/08_vercel_deploy.md`. Vercel runs the FastAPI app, but you must supply a hosted Postgres URL and `SESSION_SECRET`. The local Docker database is not available inside Vercel.
+
 ## Submission pack
 
 - `docs/01_solution_overview.md` — problem, architecture, ML, privacy
@@ -106,5 +112,6 @@ docs/              validation report, deck, business plan, Q&A
 - `docs/05_demo_script.md` — 7-minute and 3-minute demos
 - `docs/06_qna.md` — objection handling
 - `docs/07_traceability.md` — requirement and rubric map
+- `docs/08_vercel_deploy.md` — Vercel deployment runbook
 - `docs/early_model_results.md` — reproducible early-model artefact
 - `docs/institute_intelligence_financial_model.xlsx` — editable financial model
