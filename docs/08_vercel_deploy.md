@@ -17,7 +17,9 @@ Use Neon or Supabase free tier. Create a database and copy:
 - **Admin URL** — for migrations and seeding only.
 - **App URL** — pooled connection string for `app_rw`.
 
-For Neon, prefer the `-pooler` host for the app URL. For Supabase, prefer the transaction pooler on port `6543`.
+For Neon, prefer the `-pooler` host for the app URL. For Supabase, use the **transaction pooler** on port `6543` for the app URL, and the **direct connection** (or session pooler if your local network is IPv4-only) for `ADMIN_DATABASE_URL`.
+
+Supabase shared-pooler usernames include the project ref: `postgres.[PROJECT-REF]` for admin and `app_rw.[PROJECT-REF]` for the app role. Copy the host and port from the dashboard rather than composing them.
 
 ## 2. Apply migrations and seed from your machine
 
@@ -38,6 +40,8 @@ conn.execute("alter role app_rw password 'REPLACE_WITH_A_LONG_RANDOM_PASSWORD'")
 print("app_rw password updated")
 PY
 ```
+
+Supabase transaction mode does not support prepared statements or session state. The app disables prepared statements (`prepare_threshold=None`) and sets time zone inside the tenant transaction, so the transaction pooler is safe.
 
 Seed the synthetic pilot and build snapshots:
 

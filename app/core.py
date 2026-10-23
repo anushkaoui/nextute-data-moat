@@ -22,7 +22,8 @@ SCRYPT_N = 2**14
 
 
 def connect():
-    conn = psycopg.connect(DATABASE_URL, row_factory=dict_row, autocommit=True)
+    conn = psycopg.connect(DATABASE_URL, row_factory=dict_row, autocommit=True,
+                           prepare_threshold=None)
     conn.execute("set time zone 'Asia/Kolkata'")
     return conn
 
@@ -31,6 +32,7 @@ def connect():
 def tenant(conn, institute_id):
     with conn.transaction():
         conn.execute("select set_config('app.institute_id', %s, true)", (str(institute_id),))
+        conn.execute("set local time zone 'Asia/Kolkata'")
         yield conn
 
 
