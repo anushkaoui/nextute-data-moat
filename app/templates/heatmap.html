@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Mastery grid · Institute Intelligence{% endblock %}
+{% block page_title %}Mastery grid{% endblock %}
+{% block page_sub %}Latest calibrated mastery by student and topic · darker means weaker{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="between wrap" style="margin-bottom:12px">
+    <div class="tabs">
+      {% for b in batches %}
+      <a href="/mastery?batch={{ b.id }}" class="{{ 'on' if b.id==batch.id else '' }}">{{ b.name }}</a>
+      {% endfor %}
+    </div>
+    <div class="legend">
+      <span>0%</span><i style="background:#fee2e2"></i><i style="background:#fef3c7"></i><i style="background:#ecfccb"></i><i style="background:#dcfce7"></i><span>100%</span>
+    </div>
+  </div>
+  {% if rows %}
+  <div style="overflow:auto;max-height:70vh">
+    <table class="mastery-table">
+      <thead>
+        <tr>
+          <th class="name">Student</th>
+          {% for t in topics %}<th title="{{ t.name }}"><span class="mono">{{ t.code }}</span></th>{% endfor %}
+          <th class="num">Avg</th>
+        </tr>
+      </thead>
+      <tbody>
+      {% for r in rows %}
+        <tr>
+          <td class="name"><a href="/students/{{ r.student.id }}">{{ r.student.full_name }}</a><div class="tiny muted">{{ r.student.roll_no }}</div></td>
+          {% for c in r.cells %}
+          <td><span class="cell" style="background: {{ c|mcolor }}" title="{{ (c*100)|round(0) ~ '%' if c is not none else 'no evidence' }}"></span></td>
+          {% endfor %}
+          <td class="num strong">{{ ((r.avg*100)|round(0)) ~ '%' if r.avg is not none else '—' }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  {% else %}
+  <div class="empty">No students or mastery snapshots for this batch.</div>
+  {% endif %}
+  <div class="note" style="margin-top:12px">Cells with no evidence stay grey. Mastery below 35% is flagged red for teacher attention only; this grid is never shown to parents or students.</div>
+</div>
+{% endblock %}

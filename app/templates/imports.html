@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}Data imports · Institute Intelligence{% endblock %}
+{% block page_title %}Data imports{% endblock %}
+{% block page_sub %}CSV results with validation, review and idempotent commit{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="card-head">
+    <div><h2>Import history</h2><div class="hint">Every file is hashed; re-uploading the same file returns the same job</div></div>
+    <a class="btn primary" href="/imports/new">Upload results</a>
+  </div>
+  {% if jobs %}
+  <table>
+    <thead><tr><th>File</th><th>Status</th><th class="num">Rows</th><th class="num">Accepted</th><th class="num">Quarantined</th><th>Uploaded</th><th></th></tr></thead>
+    <tbody>
+    {% for j in jobs %}
+      <tr>
+        <td><span class="strong">{{ j.source_filename or 'upload.csv' }}</span><div class="tiny muted mono">{{ j.content_hash[:16] }}…</div></td>
+        <td><span class="badge {{ 'ok' if j.status=='committed' else ('medium' if j.status=='needs_review' else 'gray') }}">{{ j.status.replace('_',' ') }}</span></td>
+        <td class="num">{{ j.stats.get('total', '—') }}</td>
+        <td class="num">{{ j.stats.get('accepted', '—') }}</td>
+        <td class="num">{{ j.stats.get('quarantined', '—') }}</td>
+        <td class="muted small">{{ j.created_at.strftime('%d %b %Y %H:%M') }}</td>
+        <td class="num"><a class="btn sm" href="/imports/{{ j.id }}">Review</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No imports yet. Start with the sample CSV to see the validation flow.</div>
+  {% endif %}
+</div>
+{% endblock %}

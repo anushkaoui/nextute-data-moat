@@ -1,0 +1,61 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}Institute Intelligence{% endblock %}</title>
+  <link rel="icon" href="/static/favicon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+{% if user %}
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand">
+      <div class="brand-mark">II</div>
+      <div>
+        <div class="brand-name">Institute Intelligence</div>
+        <div class="brand-sub">Data moat platform</div>
+      </div>
+    </div>
+    <div class="inst"><span>Institute</span>{{ user.institute or user.name }}<br><span style='color:#64748b'>{{ user.role.replace('_',' ') }}</span></div>
+    <nav class="nav">
+      <a href="/dashboard" class="{{ 'on' if active=='dashboard' else '' }}"><span class="ico">▤</span><span>Overview</span></a>
+      <a href="/students" class="{{ 'on' if active=='students' else '' }}"><span class="ico">◉</span><span>Students</span></a>
+      <a href="/mastery" class="{{ 'on' if active=='mastery' else '' }}"><span class="ico">▦</span><span>Mastery grid</span></a>
+      <a href="/risk" class="{{ 'on' if active=='risk' else '' }}"><span class="ico">△</span><span>Early warning</span></a>
+      <div class="sep"></div>
+      <a href="/imports" class="{{ 'on' if active=='imports' else '' }}"><span class="ico">↥</span><span>Data imports</span></a>
+      <a href="/imports/new" class="{{ 'on' if active=='import_new' else '' }}"><span class="ico">＋</span><span>Upload results</span></a>
+      <div class="sep"></div>
+      <a href="/status" class="{{ 'on' if active=='status' else '' }}"><span class="ico">◎</span><span>Model &amp; data</span></a>
+    </nav>
+    <div class="sidebar-foot">Pilot build · Patna, Bihar<br>Template-first · No student-facing risk labels</div>
+  </aside>
+  <main class="main">
+    <div class="topbar">
+      <div>
+        <h1>{% block page_title %}Overview{% endblock %}</h1>
+        <div class="sub">{% block page_sub %}Institute intelligence for NEET / JEE coaching{% endblock %}</div>
+      </div>
+      <div class="who">
+        <div class="avatar">{{ user.name[:2]|upper }}</div>
+        <div>
+          <div class="name">{{ user.name }}</div>
+          <div class="role">{{ user.role.replace('_',' ') }}</div>
+        </div>
+        <form method="post" action="/logout" class="logout">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit">Sign out</button>
+        </form>
+      </div>
+    </div>
+    {% block content %}{% endblock %}
+  </main>
+</div>
+{% else %}
+{% block anon %}{% endblock %}
+{% endif %}
+<script src="/static/app.js" defer></script>
+</body>
+</html>

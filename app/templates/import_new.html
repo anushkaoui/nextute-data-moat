@@ -1,0 +1,45 @@
+{% extends "base.html" %}
+{% block title %}Upload results · Institute Intelligence{% endblock %}
+{% block page_title %}Upload results{% endblock %}
+{% block page_sub %}A narrow, validated CSV path — not a spreadsheet free-for-all{% endblock %}
+{% block content %}
+<div class="grid" style="grid-template-columns: 1.2fr 1fr">
+  <div class="card">
+    <h2>Upload a CSV</h2>
+    <div class="note" style="margin:6px 0 16px">Maximum 5 MB and 20,000 rows. Files are parsed in memory; only the hash and structured rows are retained. You will review every quarantined row before commit.</div>
+    <form method="post" action="/imports" enctype="multipart/form-data" class="stack">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <div>
+        <label class="field" for="file">Result file</label>
+        <input class="input" id="file" name="file" type="file" accept=".csv,text/csv" required>
+      </div>
+      <button class="btn primary" type="submit" style="justify-content:center;padding:10px">Parse and review</button>
+    </form>
+    <div class="notice" style="margin-top:16px">
+      <b>Demo file:</b> <a href="/static/demo_import.csv">download sample_results.csv</a>. It contains 40 students × 30 questions plus five deliberately broken rows to exercise validation.
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="section-title">Required columns</div>
+    <table>
+      <tbody>
+      {% for c, d in [
+        ('test_name','e.g. Weekly Test 7'),
+        ('test_date','YYYY-MM-DD'),
+        ('batch_name','Class 12'),
+        ('roll_no','institute roll number'),
+        ('student_name','used only when creating a student'),
+        ('q_no','question position, 1–200'),
+        ('topic_code','e.g. PHY-KIN, BIO-GEN'),
+        ('answer_key','A, B, C or D'),
+        ('response','A–D or blank for unattempted'),
+        ('time_taken_sec','optional')] %}
+      <tr><td class="mono">{{ c }}</td><td class="muted small">{{ d }}</td></tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    <div class="note" style="margin-top:12px">Unknown topics, malformed dates, duplicate rows and invalid keys are quarantined — never silently dropped. If a roll number is new, the student is created and consent is recorded as institute attestation for core analytics; this is flagged in the audit trail.</div>
+  </div>
+</div>
+{% endblock %}

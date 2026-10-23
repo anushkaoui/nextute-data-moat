@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block title %}Sign in · Institute Intelligence{% endblock %}
+{% block anon %}
+<div class="login-shell">
+  <section class="login-left">
+    <div>
+      <div class="flex"><div class="brand-mark">II</div><div class="brand-name" style="font-size:15px">Institute Intelligence</div></div>
+      <h1>Turn scattered test data into timely, explainable action.</h1>
+      <p>A privacy-first analytics layer for Tier-2 coaching institutes. Import OMR or CSV results, see topic mastery, and know which students need help — before they drop out.</p>
+      <div class="login-bullets">
+        <div><b>01</b><span>Rasch-calibrated mastery with honest uncertainty</span></div>
+        <div><b>02</b><span>Early-warning scores with reasons, not black boxes</span></div>
+        <div><b>03</b><span>Hindi and English parent reports from locked facts</span></div>
+      </div>
+    </div>
+    <div class="tiny" style="color:#93c5fd">Case B · The Data Moat · Nextute × Finance Club IIT Patna</div>
+  </section>
+  <section class="login-right">
+    <div class="login-box">
+      <h2>Sign in</h2>
+      <div class="sub">Use your institute account to continue.</div>
+      {% if error %}<div class="alert">{{ error }}</div>{% endif %}
+      <form method="post" action="/login" class="stack">
+        <div>
+          <label class="field" for="email">Work email</label>
+          <input class="input" id="email" name="email" type="email" autocomplete="username" required>
+        </div>
+        <div>
+          <label class="field" for="password">Password</label>
+          <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        <button class="btn primary" type="submit" style="justify-content:center;padding:10px">Continue</button>
+      </form>
+      <div class="demo-creds">
+        <b>Demo accounts</b><br>
+        owner@demo.test · teacher@demo.test · admin@demo.test<br>
+        Password: <span class="mono">demo1234</span>
+      </div>
+    </div>
+  </section>
+</div>
+{% endblock %}

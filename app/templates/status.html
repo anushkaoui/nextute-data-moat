@@ -1,0 +1,77 @@
+{% extends "base.html" %}
+{% block title %}Model &amp; data · Institute Intelligence{% endblock %}
+{% block page_title %}Model &amp; data health{% endblock %}
+{% block page_sub %}Reproducibility, limitations and privacy controls{% endblock %}
+{% block content %}
+<div class="grid g4">
+  {% for label, key in [('Students','student'),('Responses','response'),('Mastery rows','mastery_snapshot'),('Risk snapshots','risk_snapshot')] %}
+  <div class="card kpi"><div class="label">{{ label }}</div><div class="value">{{ counts.get(key,0) }}</div></div>
+  {% endfor %}
+</div>
+
+<div class="grid g2" style="margin-top:16px;grid-template-columns:1.4fr 1fr">
+  <div class="card">
+    <div class="card-head"><h2>Model registry</h2><span class="hint">latest first</span></div>
+    <table>
+      <thead><tr><th>Kind</th><th>Version</th><th>Trained</th><th>Metrics</th></tr></thead>
+      <tbody>
+      {% for m in models %}
+      <tr>
+        <td class="strong">{{ m.kind.replace('_',' ') }}</td>
+        <td class="mono tiny">{{ m.version }}</td>
+        <td class="muted small">{{ m.trained_at.strftime('%d %b %H:%M') if m.trained_at else '—' }}</td>
+        <td class="tiny">
+          {% if m.metrics.get('auc') %}AUC {{ m.metrics.get('auc')|round(3) }}, AP {{ (m.metrics.get('pr_auc') or 0)|round(3) }}, Brier {{ (m.metrics.get('brier') or 0)|round(3) }}<br><span class="muted">n={{ m.metrics.get('n') }}, positives={{ m.metrics.get('positives') }}</span>
+          {% elif m.metrics.get('coverage_80') is not none %}MAE {{ (m.metrics.get('mae') or 0)|round(2) }}, 80% coverage {{ ((m.metrics.get('coverage_80') or 0)*100)|round(1) }}%<br><span class="muted">n={{ m.metrics.get('n') }}, q80={{ (m.metrics.get('q80_abs') or 0)|round(1) }}</span>
+          {% elif m.metrics.get('method') %}{{ m.metrics.get('method') }}<br><span class="muted">{{ m.metrics.get('note') }}</span>
+          {% else %}—{% endif %}
+        </td>
+      </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="section-title">Data freshness</div>
+      <dl class="dl">
+        <dt>Analytics as of</dt><dd>{{ AS_OF.strftime('%d %b %Y') }}</dd>
+        <dt>Last import</dt><dd>{% if last_import %}{{ last_import.created_at.strftime('%d %b %Y %H:%M') }} · {{ last_import.status }}{% else %}—{% endif %}</dd>
+        <dt>Reports</dt><dd>{{ counts.get('report',0) }}</dd>
+        <dt>Import jobs</dt><dd>{{ counts.get('import_job',0) }}</dd>
+      </dl>
+    </div>
+    <div class="card">
+      <div class="section-title">Tenant isolation evidence</div>
+      <div class="note">PostgreSQL row-level security is forced on every tenant table. The app connects as a non-superuser role with no <span class="mono">BYPASSRLS</span>; tenant context is set per transaction. The smoke test asserts cross-tenant reads return zero rows and cross-tenant inserts fail with SQLSTATE 42501.</div>
+      <div class="mono tiny" style="margin-top:8px">db/tests/rls_smoke.sql · 8/8 assertions pass</div>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <h2>Honest limitations</h2>
+  <div class="grid g2" style="margin-top:10px">
+    <div>
+      <div class="section-title">What the numbers mean</div>
+      <ul class="note" style="margin:0 0 0 16px;padding:0;line-height:1.8">
+        <li>All results shown are from a <b>synthetic pilot</b> (3 institutes, 1,000 students, 180,000 responses, seed 20260401).</li>
+        <li>The risk model is trained on a designed disengagement signal; AUC near 0.99 is optimistic and not a field claim.</li>
+        <li>Percentile bands are <b>internal cohort</b> estimates; they are never mapped to a JEE/NEET rank.</li>
+        <li>Falling-behind and fee-default are v1 transparent rules until the institute has 12+ months of outcomes.</li>
+      </ul>
+    </div>
+    <div>
+      <div class="section-title">Controls in this build</div>
+      <ul class="note" style="margin:0 0 0 16px;padding:0;line-height:1.8">
+        <li>Purpose-bound consent ledger; parent reports require an active consent and a personal expiring link.</li>
+        <li>PII stored in a separate table; guardians' phone numbers are HMACed, not stored in clear.</li>
+        <li>Risk reasons are feature contributions, not free text; parent reports never expose risk bands.</li>
+        <li>Import rows are quarantined with errors; commit is idempotent and audited in <span class="mono">audit_event</span>.</li>
+        <li>LLM path is off; reports use a reviewed bilingual template with fact locking.</li>
+      </ul>
+    </div>
+  </div>
+</div>
+{% endblock %}

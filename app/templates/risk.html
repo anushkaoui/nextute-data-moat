@@ -1,0 +1,70 @@
+{% extends "base.html" %}
+{% block title %}Early warning · Institute Intelligence{% endblock %}
+{% block page_title %}Early warning{% endblock %}
+{% block page_sub %}Separate targets, separate thresholds · reasons are generated from features, never invented{% endblock %}
+{% block content %}
+<div class="card">
+  <div class="between wrap" style="margin-bottom:12px">
+    <div class="tabs">
+      <a href="/risk?target=disengagement" class="{{ 'on' if target=='disengagement' else '' }}">Disengagement · 28d</a>
+      <a href="/risk?target=falling_behind" class="{{ 'on' if target=='falling_behind' else '' }}">Falling behind</a>
+      <a href="/risk?target=fee_default" class="{{ 'on' if target=='fee_default' else '' }}">Fee default</a>
+    </div>
+    <div class="flex wrap">
+      <a class="btn sm" href="/risk?target={{ target }}">All</a>
+      <a class="btn sm" href="/risk?target={{ target }}&band=high">High · {{ counts.get('high',0) }}</a>
+      <a class="btn sm" href="/risk?target={{ target }}&band=medium">Medium · {{ counts.get('medium',0) }}</a>
+      <a class="btn sm" href="/risk?target={{ target }}&band=low">Low · {{ counts.get('low',0) }}</a>
+    </div>
+  </div>
+
+  {% if model %}
+  <div class="notice" style="margin-bottom:14px">
+    <div class="between wrap">
+      <div>
+        <b>{{ model.kind.replace('_',' ') }}</b> · <span class="mono">{{ model.version }}</span>
+        {% set m = model.metrics %}
+        {% if m.get('auc') %}
+          · AUC {{ m.get('auc')|round(3) }} · PR-AUC {{ (m.get('pr_auc') or 0)|round(3) }} · Brier {{ (m.get('brier') or 0)|round(3) }} · base rate {{ ((m.get('base_rate') or 0)*100)|round(1) }}%
+        {% elif m.get('method') %}
+          · {{ m.get('method') }} — {{ m.get('note') }}
+        {% endif %}
+      </div>
+      <span class="tiny">trained {{ model.trained_at.strftime('%d %b %Y %H:%M') }}</span>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if rows %}
+  <table>
+    <thead><tr><th>Student</th><th>Batch</th><th style="width:150px">Score</th><th>Signals</th><th>Data</th><th></th></tr></thead>
+    <tbody>
+    {% for r in rows %}
+      <tr>
+        <td><a href="/students/{{ r.id }}" class="strong">{{ r.full_name }}</a><div class="tiny muted">Roll {{ r.roll_no }}</div></td>
+        <td class="muted">{{ r.batch }}</td>
+        <td>
+          <div class="prob {{ r.band }}">
+            <span class="badge {{ r.band }}">{{ r.band }}</span>
+            <span class="bar"><span style="width: {{ (r.score*100)|round(0) }}%"></span></span>
+            <span class="tiny">{{ (r.score*100)|round(0) }}</span>
+          </div>
+        </td>
+        <td>
+          {% for reason in r.reasons[:2] %}<span class="risk-reason">· {{ reason_text(reason, user.role) }}</span>{% endfor %}
+        </td>
+        <td><span class="badge {{ 'gray' if r.data_sufficiency!='ok' else 'ok' }}">{{ r.data_sufficiency }}</span></td>
+        <td class="num"><a class="btn sm" href="/students/{{ r.id }}">Open</a></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+  {% else %}
+  <div class="empty">No snapshots for this target yet.</div>
+  {% endif %}
+
+  <div class="note" style="margin-top:14px">
+    Disengagement is a trained, calibrated logistic model (60/20/20 train/calibration/test split, Platt scaling). Falling-behind and fee-default are transparent v1 scores because the pilot lacks enough observed outcomes to train them honestly; they are labelled as rules in the model card. Bands are triage aids, not decisions.
+  </div>
+</div>
+{% endblock %}

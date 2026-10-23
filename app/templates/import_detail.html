@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block title %}Import review · Institute Intelligence{% endblock %}
+{% block page_title %}Import review{% endblock %}
+{% block page_sub %}{{ job.source_filename or 'upload.csv' }} · {{ job.created_at.strftime('%d %b %Y %H:%M') }}{% endblock %}
+{% block content %}
+<div class="grid g4">
+  <div class="card kpi"><div class="label">Rows</div><div class="value">{{ job.stats.get('total',0) }}</div></div>
+  <div class="card kpi"><div class="label">Accepted</div><div class="value">{{ job.stats.get('accepted',0) }}</div></div>
+  <div class="card kpi"><div class="label">Quarantined</div><div class="value">{{ job.stats.get('quarantined',0) }}</div></div>
+  <div class="card kpi"><div class="label">Status</div><div class="value" style="font-size:20px"><span class="badge {{ 'ok' if job.status=='committed' else 'medium' }}">{{ job.status.replace('_',' ') }}</span></div>
+    {% if job.stats.get('commit') %}<div class="delta">{{ job.stats.commit.inserted }} responses written · {{ job.stats.commit.students_created }} new students</div>{% endif %}
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="between wrap" style="margin-bottom:12px">
+    <div>
+      <h2>Row-level review</h2>
+      <div class="hint">Showing up to 300 rows. Quarantined rows are excluded from commit; fix the source and re-upload if needed.</div>
+    </div>
+    <div class="flex">
+      <a class="btn" href="/imports">Back</a>
+      {% if job.status == 'needs_review' %}
+      <form method="post" action="/imports/{{ job.id }}/commit">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button class="btn primary" type="submit">Commit {{ job.stats.get('accepted',0) }} rows</button>
+      </form>
+      {% endif %}
+    </div>
+  </div>
+  <div style="overflow:auto;max-height:60vh">
+    <table>
+      <thead><tr><th>#</th><th>Status</th><th>Test</th><th>Student</th><th>Q</th><th>Topic</th><th>Key</th><th>Attempt</th><th>Issues</th></tr></thead>
+      <tbody>
+      {% for r in rows %}
+        {% set n = r.normalized or {} %}
+        <tr>
+          <td class="muted">{{ r.row_no }}</td>
+          <td><span class="badge {{ 'ok' if r.status=='accepted' else ('medium' if r.status=='quarantined' else 'gray') }}">{{ r.status }}</span></td>
+          <td>{{ n.get('test_name','—') }}<div class="tiny muted">{{ n.get('test_date','') }}</div></td>
+          <td>{{ n.get('student_name','—') }}<div class="tiny muted">Roll {{ n.get('roll_no','—') }} · {{ n.get('batch_name','') }}</div></td>
+          <td>{{ n.get('q_no','—') }}</td>
+          <td class="mono tiny">{{ n.get('topic_code','—') }}</td>
+          <td class="mono">{{ n.get('answer_key','—') }}</td>
+          <td class="mono">{{ n.get('response') or 'blank' }}</td>
+          <td class="tiny" style="color:#b91c1c">{{ (r.errors or [])|join('; ') }}</td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% endblock %}

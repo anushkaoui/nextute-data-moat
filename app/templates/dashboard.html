@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+{% block title %}Overview · Institute Intelligence{% endblock %}
+{% block page_title %}Overview{% endblock %}
+{% block page_sub %}Data as of {{ AS_OF.strftime('%d %b %Y') }} · Patna pilot{% endblock %}
+{% block content %}
+
+<section class="hero">
+  <div class="tag">Decision support, not a verdict</div>
+  <h1>Know who is slipping, and why.</h1>
+  <p>Attendance, test performance and topic mastery are combined into calibrated early-warning scores. Every score has a reason and every report is traceable to locked facts.</p>
+  <div class="flex wrap" style="margin-top:16px">
+    <a class="btn" href="/imports/new" style="background:white;border-color:white">Upload results</a>
+    <a class="btn" href="/risk" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);color:white">Open early warning</a>
+    <a class="btn" href="/mastery" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.3);color:white">Mastery grid</a>
+  </div>
+</section>
+
+<div class="grid g4" style="margin-top:16px">
+  <div class="card kpi">
+    <div class="label">Active students</div>
+    <div class="value">{{ stats.active }}</div>
+    <div class="delta">{{ stats.total }} enrolled in total</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">Attendance · last 28 days</div>
+    <div class="value">{{ att_pct }}<small>%</small></div>
+    <div class="delta">Present or late in recorded classes</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">Tests published</div>
+    <div class="value">{{ tests.n }}</div>
+    <div class="delta">Latest on {{ tests.last.strftime('%d %b %Y') if tests.last else '—' }}</div>
+  </div>
+  <div class="card kpi">
+    <div class="label">Fees overdue</div>
+    {% if fees %}
+    <div class="value">{{ fees.due|inr }}</div>
+    <div class="delta">Across all open instalments</div>
+    {% else %}
+    <div class="value" style="font-size:20px">Restricted</div>
+    <div class="delta">Owner / academic head only</div>
+    {% endif %}
+  </div>
+</div>
+
+<div class="grid g3" style="margin-top:16px">
+  {% for key, title, desc in [
+      ('disengagement','Disengagement','Will not attend for 28 days'),
+      ('falling_behind','Falling behind','Next mock and mastery band'),
+      ('fee_default','Fee default','Overdue and payment history')] %}
+  {% if key != 'fee_default' or user.role in ('owner','academic_head','admin') %}
+  {% set c = risk.get(key, {}) %}
+  <div class="card">
+    <div class="between">
+      <div>
+        <div class="section-title">{{ title }}</div>
+        <div class="strong">{{ c.get('high',0) }} high · {{ c.get('medium',0) }} medium</div>
+      </div>
+      <a class="btn sm" href="/risk?target={{ key }}">View</a>
+    </div>
+    <div class="note" style="margin-top:8px">{{ desc }}</div>
+    <div class="progress" style="margin-top:12px">
+      {% set total = (c.get('high',0) + c.get('medium',0) + c.get('low',0)) or 1 %}
+      <span style="width: {{ (c.get('high',0) * 100 / total)|round(1) }}%; background:#dc2626"></span>
+    </div>
+  </div>
+  {% endif %}
+  {% endfor %}
+</div>
+
+<div class="grid g2" style="margin-top:16px; grid-template-columns: 1.55fr 1fr">
+  <div class="card">
+    <div class="card-head">
+      <div>
+        <h2>Highest disengagement risk</h2>
+        <div class="hint">Top 8 calibrated scores · 28-day horizon</div>
+      </div>
+      <a class="btn sm" href="/risk">All students</a>
+    </div>
+    {% if risky %}
+    <table>
+      <thead><tr><th>Student</th><th>Batch</th><th>Risk</th><th>Primary reason</th><th></th></tr></thead>
+      <tbody>
+      {% for r in risky %}
+        <tr>
+          <td><a href="/students/{{ r.id }}"><span class="strong">{{ r.full_name }}</span></a><div class="tiny muted">Roll {{ r.roll_no }}</div></td>
+          <td class="muted">{{ r.batch }}</td>
+          <td>
+            <div class="prob {{ r.band }}"><span class="badge {{ r.band }}">{{ r.band }}</span><span class="bar"><span style="width: {{ (r.score*100)|round(0) }}%"></span></span><span class="tiny">{{ (r.score*100)|round(0) }}%</span></div>
+          </td>
+          <td class="risk-reason">{{ reason_text(r.reasons[0], user.role) if r.reasons else '—' }}</td>
+          <td class="num"><a class="btn sm" href="/students/{{ r.id }}">Open</a></td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    {% else %}<div class="empty">No risk snapshots yet. Import results and run the analytics job.</div>{% endif %}
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="card-head"><h2>Weakest topics</h2><span class="hint">avg mastery</span></div>
+      {% for t in weak %}
+      <div style="margin-bottom:11px">
+        <div class="between tiny" style="margin-bottom:4px">
+          <span><span class="chip">{{ t.subject }}</span> {{ t.name }}</span>
+          <span class="strong">{{ (t.avg_m*100)|round(0) }}%</span>
+        </div>
+        <div class="progress"><span style="width: {{ (t.avg_m*100)|round(0) }}%; background: #f59e0b"></span></div>
+      </div>
+      {% else %}<div class="empty">No mastery snapshots yet.</div>{% endfor %}
+    </div>
+
+    <div class="card tight">
+      <div class="section-title">Data &amp; model health</div>
+      <div class="list">
+        <div class="list-row"><span class="muted">Last import</span>
+          {% if last_import %}<a href="/imports/{{ last_import.id }}" class="small">{{ last_import.status }}</a>{% else %}<span class="small muted">None</span>{% endif %}
+        </div>
+        <div class="list-row"><span class="muted">Rasch calibration</span>
+          {% set r = models|selectattr('kind','equalto','rasch')|first %}
+          <span class="small">{{ 'active' if r else 'pending' }}</span>
+        </div>
+        <div class="list-row"><span class="muted">Risk model</span>
+          {% set r = models|selectattr('kind','equalto','risk_disengagement')|first %}
+          <span class="small">{{ 'AUC ' ~ (r.metrics.get('auc')|round(3)) if r and r.metrics.get('auc') else 'pending' }}</span>
+        </div>
+        <div class="list-row"><span class="muted">Reports generated</span><a class="small" href="/students">Parent reports</a></div>
+      </div>
+      <a class="btn sm" href="/status" style="margin-top:8px">Model card &amp; limits</a>
+    </div>
+  </div>
+</div>
+
+<div class="card" style="margin-top:16px">
+  <div class="card-head">
+    <div><h2>Model evidence</h2><div class="hint">Latest snapshot per model kind, on synthetic pilot data</div></div>
+    <a class="btn sm" href="/status">Full model card</a>
+  </div>
+  <table>
+    <thead><tr><th>Model</th><th>Version</th><th>Key metric</th><th>Status</th></tr></thead>
+    <tbody>
+    {% for m in models %}
+      <tr>
+        <td class="strong">{{ m.kind.replace('_',' ') }}</td>
+        <td class="mono">{{ m.version }}</td>
+        <td class="muted">
+          {% if m.metrics.get('auc') %}AUC {{ m.metrics.get('auc')|round(3) }} · PR-AUC {{ (m.metrics.get('pr_auc') or 0)|round(3) }}
+          {% elif m.metrics.get('coverage_80') is not none %}MAE {{ (m.metrics.get('mae') or 0)|round(1) }} · coverage {{ (m.metrics.get('coverage_80')*100)|round(0) }}%
+          {% elif m.metrics.get('method') %}{{ m.metrics.get('method') }}
+          {% else %}—{% endif %}
+        </td>
+        <td><span class="badge ok">{{ m.status }}</span></td>
+      </tr>
+    {% endfor %}
+    </tbody>
+  </table>
+</div>
+
+{% endblock %}

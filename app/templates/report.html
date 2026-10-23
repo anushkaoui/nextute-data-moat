@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Parent report · Institute Intelligence{% endblock %}
+{% block page_title %}Parent report{% endblock %}
+{% block page_sub %}{{ report.full_name }} · {{ 'Hindi' if report.language=='hi' else 'English' }} · {{ report.period_start.strftime('%d %b') }}–{{ report.period_end.strftime('%d %b %Y') }}{% endblock %}
+{% block content %}
+<div class="between wrap no-print" style="margin-bottom:14px">
+  <div class="flex wrap">
+    <span class="badge ok">Fact-locked</span>
+    <span class="badge gray">{{ 'Template-generated' if report.status=='template_fallback' else report.status.replace('_',' ') }}</span>
+    <span class="badge info">No LLM call</span>
+  </div>
+  <div class="flex">
+    <a class="btn" href="/students/{{ report.student_id }}">Back to student</a>
+    <button class="btn" data-print>Print / PDF</button>
+    <form method="post" action="/reports/{{ report.id }}/parent-link">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn" type="submit">Create parent link</button>
+    </form>
+    <form method="post" action="/reports/{{ report.id }}/whatsapp">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button class="btn primary" type="submit">Queue WhatsApp</button>
+    </form>
+  </div>
+</div>
+
+{% if request.query_params.get('wa') %}<div class="notice no-print" style="max-width:760px;margin:0 auto 12px">WhatsApp message queued as a utility template. The provider adapter is stubbed in this pilot; delivery and cost are logged in <span class="mono">message_log</span>.</div>{% endif %}
+<div class="report-paper">
+  <div class="logo">Institute Intelligence · Parent progress report</div>
+  <h1>{{ report.full_name }}</h1>
+  <div class="muted">Period {{ report.period_start.strftime('%d %B') }} – {{ report.period_end.strftime('%d %B %Y') }} · {{ 'हिंदी' if report.language=='hi' else 'English' }}</div>
+  <div class="body">{{ report.body }}</div>
+  <div class="report-meta">
+    <div><div class="k">Attendance</div><div class="v">{{ report.facts.attendance_pct }}%</div></div>
+    <div><div class="k">Average score</div><div class="v">{{ report.facts.avg_score }}%</div></div>
+    <div><div class="k">Internal percentile</div><div class="v">{{ report.facts.percentile_point }} <span class="tiny muted">({{ report.facts.percentile_low }}–{{ report.facts.percentile_high }})</span></div></div>
+  </div>
+  <div class="note" style="margin-top:18px">Generated from a locked facts object and a reviewed template. The optional LLM path is disabled for this run; the fact-locking validator rejects any number not present in the facts object.</div>
+</div>
+{% endblock %}

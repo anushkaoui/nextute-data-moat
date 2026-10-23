@@ -1,0 +1,640 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Validation report — Institute Intelligence</title>
+<style>
+@page { size: A4; margin: 18mm 16mm 18mm 16mm; }
+* { box-sizing: border-box; }
+body { font-family: Arial, Helvetica, sans-serif; color: #172033; font-size: 10.2pt; line-height: 1.5; margin: 0; }
+h1 { font-size: 25pt; line-height: 1.12; color: #0f172a; margin: 0 0 10px; letter-spacing: -0.03em; }
+h1 + p strong { color: #1d4ed8; }
+h2 { font-size: 15pt; color: #0f172a; margin: 22px 0 8px; border-bottom: 1.5px solid #dbeafe; padding-bottom: 5px; page-break-after: avoid; }
+h3 { font-size: 11.4pt; color: #1e3a8a; margin: 15px 0 5px; page-break-after: avoid; }
+p { margin: 0 0 8px; }
+ul, ol { margin: 0 0 9px 18px; padding: 0; }
+li { margin: 0 0 3px; }
+table { width: 100%; border-collapse: collapse; margin: 8px 0 13px; font-size: 8.9pt; page-break-inside: avoid; }
+th { background: #0f172a; color: white; text-align: left; padding: 6px 7px; font-weight: 650; }
+td { border-bottom: 1px solid #e2e8f0; padding: 5px 7px; vertical-align: top; }
+tr:nth-child(even) td { background: #f8fafc; }
+code, pre { font-family: "Courier New", Courier, monospace; font-size: 8.6pt; }
+pre { background: #0f172a; color: #e2e8f0; padding: 10px 12px; border-radius: 6px; white-space: pre-wrap; }
+blockquote { margin: 10px 0; padding: 8px 12px; border-left: 3px solid #1d4ed8; background: #eff6ff; }
+hr { border: none; border-top: 1px solid #e2e8f0; margin: 16px 0; }
+a { color: #1d4ed8; text-decoration: none; }
+strong { color: #0f172a; }
+</style></head><body><h1 id="validation-report">Validation report</h1>
+<p><strong>Product:</strong> Institute Intelligence — Case B “The Data Moat”<br />
+<strong>Version:</strong> pilot-1.0<br />
+<strong>Date:</strong> 23 October 2026<br />
+<strong>Status:</strong> prototype validated on synthetic data; ready for a controlled design-partner pilot</p>
+<h2 id="executive-summary">Executive summary</h2>
+<p>The prototype works end to end: 3 synthetic institutes, 1,000 students, 181,201 responses and 52,000 attendance records flow through CSV ingestion, Rasch mastery, three risk targets, intervention tracking, bilingual reports and parent links.</p>
+<ul>
+<li><strong>Functional:</strong> 6/6 automated tests pass; all primary pages return 200; import, commit, report and parent-link flows completed.</li>
+<li><strong>Model:</strong> Rasch converges in 41–76 iterations. Disengagement AUC is 0.92–1.00 on held-out synthetic splits. Internal percentile coverage is 74–90% against a nominal 80%; MAE is 8.1–8.5 marks.</li>
+<li><strong>Privacy:</strong> tenant isolation, consent gating, teacher fee redaction and parent no-risk/no-fee views were verified.</li>
+<li><strong>Performance:</strong> dashboard p50 99 ms and p95 257 ms under 100 requests at 10-way concurrency; full analytics rebuild for 181k responses takes 7.7 s.</li>
+<li><strong>Caveat:</strong> this is synthetic data with a designed dropout signal. The AUC is not a real-world claim. The next step is a time-based, two-institute pilot.</li>
+</ul>
+<h2 id="1-scope-of-validation">1. Scope of validation</h2>
+<table>
+<thead>
+<tr>
+<th>In scope</th>
+<th>Out of scope</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>CSV import, validation, quarantine, commit</td>
+<td>Native Google Forms connector</td>
+</tr>
+<tr>
+<td>Rasch and topic mastery</td>
+<td>Production OMR scanner</td>
+</tr>
+<tr>
+<td>Disengagement, falling-behind, fee-default scores</td>
+<td>Real payment collection</td>
+</tr>
+<tr>
+<td>Internal percentile band</td>
+<td>JEE/NEET rank prediction</td>
+</tr>
+<tr>
+<td>English/Hindi report, parent link</td>
+<td>Live WhatsApp provider integration</td>
+</tr>
+<tr>
+<td>RLS, roles, consent, audit, erasure request</td>
+<td>Legal sign-off under DPDP</td>
+</tr>
+<tr>
+<td>Synthetic pilot at 3 institutes</td>
+<td>Real institute outcomes</td>
+</tr>
+</tbody>
+</table>
+<h2 id="2-environment-and-data">2. Environment and data</h2>
+<table>
+<thead>
+<tr>
+<th>Item</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Application</td>
+<td>FastAPI + Jinja, Python 3.14</td>
+</tr>
+<tr>
+<td>Database</td>
+<td>PostgreSQL 16.15, Docker, port 55432</td>
+</tr>
+<tr>
+<td>Tenants</td>
+<td>3: Patna NEET Academy (400), Gaya Success Point (350), Patna JEE Circle (250)</td>
+</tr>
+<tr>
+<td>Students</td>
+<td>1,000</td>
+</tr>
+<tr>
+<td>Tests</td>
+<td>55 (54 seeded + 1 imported)</td>
+</tr>
+<tr>
+<td>Items</td>
+<td>510</td>
+</tr>
+<tr>
+<td>Responses</td>
+<td>181,201</td>
+</tr>
+<tr>
+<td>Attendance records</td>
+<td>52,000</td>
+</tr>
+<tr>
+<td>Reports</td>
+<td>30 per institute, English + Hindi</td>
+</tr>
+<tr>
+<td>As-of date</td>
+<td>30 September 2026</td>
+</tr>
+<tr>
+<td>Raw import</td>
+<td>1,205 rows: 1,200 accepted, 4 quarantined, 1 duplicate</td>
+</tr>
+</tbody>
+</table>
+<p>The synthetic generator creates ability, topic affinity, attendance decline and withdrawal. That makes the data useful for testing plumbing and failure modes, but it also makes the risk metrics optimistic.</p>
+<h2 id="3-functional-validation">3. Functional validation</h2>
+<table>
+<thead>
+<tr>
+<th>ID</th>
+<th>Test</th>
+<th>Method</th>
+<th>Result</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>V1</td>
+<td>Tenant isolation</td>
+<td>pytest: count students per tenant; bare connection</td>
+<td>Pass: 350 / 250 / 400; bare connection 0</td>
+</tr>
+<tr>
+<td>V2</td>
+<td>Cross-tenant visibility</td>
+<td>tenant A query filtered by tenant B</td>
+<td>Pass: 0 foreign rows</td>
+</tr>
+<tr>
+<td>V3</td>
+<td>Auth and redirects</td>
+<td>pytest + TestClient</td>
+<td>Pass: unauth 303; bad login 200; good login 303</td>
+</tr>
+<tr>
+<td>V4</td>
+<td>Teacher fee redaction</td>
+<td>Playwright text scan of dashboard/student</td>
+<td>Pass: no ₹ amounts; fee-default target hidden</td>
+</tr>
+<tr>
+<td>V5</td>
+<td>Parent privacy</td>
+<td>Playwright parent link</td>
+<td>Pass: report visible; no risk label or fee amount</td>
+</tr>
+<tr>
+<td>V6</td>
+<td>Consent enforcement</td>
+<td>revoke <code>parent_communication</code>, generate report</td>
+<td>Pass: <code>{"error": "consent"}</code></td>
+</tr>
+<tr>
+<td>V7</td>
+<td>CSV validation</td>
+<td>1,205-row demo file</td>
+<td>Pass: 1,200 accepted / 4 quarantined / 1 duplicate</td>
+</tr>
+<tr>
+<td>V8</td>
+<td>Idempotent upload</td>
+<td>same content hash twice</td>
+<td>Pass: same job id, <code>existing=True</code></td>
+</tr>
+<tr>
+<td>V9</td>
+<td>Commit</td>
+<td>import job commit</td>
+<td>Pass: 1,200 responses, 1 test, 0 new students</td>
+</tr>
+<tr>
+<td>V10</td>
+<td>WhatsApp entry</td>
+<td>signed webhook, roll/test/question/answer</td>
+<td>Pass: response stored as <code>form</code>, confidence 0.80, marks 4</td>
+</tr>
+<tr>
+<td>V11</td>
+<td>WhatsApp report queue</td>
+<td>report page action</td>
+<td>Pass: <code>message_log</code> row queued with utility template</td>
+</tr>
+<tr>
+<td>V12</td>
+<td>Erasure request</td>
+<td>owner action on student</td>
+<td>Pass: pending request + audit event</td>
+</tr>
+<tr>
+<td>V13</td>
+<td>Page health</td>
+<td>owner session, 6 pages</td>
+<td>Pass: 200 for dashboard, students, mastery, risk, import, report, status</td>
+</tr>
+<tr>
+<td>V14</td>
+<td>Automated suite</td>
+<td><code>python3 -m pytest -q</code></td>
+<td>Pass: 6/6</td>
+</tr>
+</tbody>
+</table>
+<h3 id="import-evidence">Import evidence</h3>
+<pre><code class="language-text">total: 1,205
+accepted: 1,200
+quarantined: 4
+duplicate: 1
+commit: inserted 1,200; duplicate 0; tests_created 1; students_created 0
+</code></pre>
+<p>The four quarantine rows exercise unknown topic code, malformed date, missing answer key and out-of-range question number. These are visible first in the review screen.</p>
+<h2 id="4-model-validation">4. Model validation</h2>
+<h3 id="41-rasch-mastery">4.1 Rasch / mastery</h3>
+<table>
+<thead>
+<tr>
+<th>Institute</th>
+<th style="text-align: right;">Students</th>
+<th style="text-align: right;">Items</th>
+<th style="text-align: right;">Responses</th>
+<th style="text-align: right;">θ sd</th>
+<th style="text-align: right;">b sd</th>
+<th style="text-align: right;">Iterations</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Patna NEET Academy</td>
+<td style="text-align: right;">400</td>
+<td style="text-align: right;">169</td>
+<td style="text-align: right;">69,599</td>
+<td style="text-align: right;">0.718</td>
+<td style="text-align: right;">0.829</td>
+<td style="text-align: right;">46</td>
+</tr>
+<tr>
+<td>Gaya Success Point</td>
+<td style="text-align: right;">350</td>
+<td style="text-align: right;">140</td>
+<td style="text-align: right;">59,818</td>
+<td style="text-align: right;">0.732</td>
+<td style="text-align: right;">0.899</td>
+<td style="text-align: right;">76</td>
+</tr>
+<tr>
+<td>Patna JEE Circle</td>
+<td style="text-align: right;">250</td>
+<td style="text-align: right;">146</td>
+<td style="text-align: right;">42,781</td>
+<td style="text-align: right;">0.716</td>
+<td style="text-align: right;">0.887</td>
+<td style="text-align: right;">41</td>
+</tr>
+</tbody>
+</table>
+<p>θ sd near 0.7 is plausible for a mixed Class 11/12/dropper cohort. The item spread (b sd 0.83–0.90) means the tests contain a usable range of difficulty. Convergence is stable; no divergence was observed after damping and recentering.</p>
+<h3 id="42-disengagement-28-day">4.2 Disengagement (28-day)</h3>
+<table>
+<thead>
+<tr>
+<th>Institute</th>
+<th style="text-align: right;">Positives</th>
+<th style="text-align: right;">Base rate</th>
+<th style="text-align: right;">AUC</th>
+<th style="text-align: right;">PR-AUC</th>
+<th style="text-align: right;">Brier</th>
+<th style="text-align: right;">Recall @10%</th>
+<th style="text-align: right;">Precision @10%</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Patna NEET Academy</td>
+<td style="text-align: right;">24</td>
+<td style="text-align: right;">6.0%</td>
+<td style="text-align: right;">0.992</td>
+<td style="text-align: right;">0.925</td>
+<td style="text-align: right;">0.035</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.63</td>
+</tr>
+<tr>
+<td>Gaya Success Point</td>
+<td style="text-align: right;">19</td>
+<td style="text-align: right;">5.4%</td>
+<td style="text-align: right;">1.000</td>
+<td style="text-align: right;">1.000</td>
+<td style="text-align: right;">0.016</td>
+<td style="text-align: right;">1.00</td>
+<td style="text-align: right;">0.57</td>
+</tr>
+<tr>
+<td>Patna JEE Circle</td>
+<td style="text-align: right;">15</td>
+<td style="text-align: right;">6.0%</td>
+<td style="text-align: right;">0.922</td>
+<td style="text-align: right;">0.738</td>
+<td style="text-align: right;">0.025</td>
+<td style="text-align: right;">0.67</td>
+<td style="text-align: right;">0.40</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Interpretation.</strong> The model ranks synthetic withdrawals well, especially in Patna NEET. Gaya’s perfect AUC reflects a clean synthetic separation, not model superiority. JEE Circle is the most honest stress case: 15 positives, AUC 0.922, top-10% recall 0.67. The pilot must replace this with time-based validation on real withdrawals.</p>
+<h3 id="43-internal-percentile-band">4.3 Internal percentile band</h3>
+<table>
+<thead>
+<tr>
+<th>Institute</th>
+<th style="text-align: right;">n</th>
+<th style="text-align: right;">MAE (marks)</th>
+<th style="text-align: right;">80% interval coverage</th>
+<th style="text-align: right;">q80 absolute error</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Patna NEET Academy</td>
+<td style="text-align: right;">400</td>
+<td style="text-align: right;">8.07</td>
+<td style="text-align: right;">90.0%</td>
+<td style="text-align: right;">15.6</td>
+</tr>
+<tr>
+<td>Gaya Success Point</td>
+<td style="text-align: right;">350</td>
+<td style="text-align: right;">8.38</td>
+<td style="text-align: right;">74.3%</td>
+<td style="text-align: right;">12.3</td>
+</tr>
+<tr>
+<td>Patna JEE Circle</td>
+<td style="text-align: right;">250</td>
+<td style="text-align: right;">8.47</td>
+<td style="text-align: right;">84.0%</td>
+<td style="text-align: right;">14.6</td>
+</tr>
+</tbody>
+</table>
+<p>Nominal coverage is 80%. The observed range (74–90%) is acceptable for a pilot but shows that the interval is not perfectly calibrated across cohorts. Reports label the interval as a range and explicitly say it is not a JEE/NEET rank.</p>
+<h3 id="44-rule-based-targets">4.4 Rule-based targets</h3>
+<table>
+<thead>
+<tr>
+<th>Institute</th>
+<th style="text-align: right;">Falling behind high/medium</th>
+<th style="text-align: right;">Fee default high/medium</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Patna NEET Academy</td>
+<td style="text-align: right;">48 / 122</td>
+<td style="text-align: right;">20 / 136</td>
+</tr>
+<tr>
+<td>Gaya Success Point</td>
+<td style="text-align: right;">9 / 88</td>
+<td style="text-align: right;">12 / 123</td>
+</tr>
+<tr>
+<td>Patna JEE Circle</td>
+<td style="text-align: right;">19 / 64</td>
+<td style="text-align: right;">4 / 92</td>
+</tr>
+</tbody>
+</table>
+<p>These are deliberately rules, not models. They are explainable and tunable, but they are not validated predictors. Fee amounts are visible only to owner/academic head/admin.</p>
+<h2 id="5-privacy-and-security-validation">5. Privacy and security validation</h2>
+<table>
+<thead>
+<tr>
+<th>Control</th>
+<th>Evidence</th>
+<th>Verdict</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>RLS</td>
+<td>per-tenant counts; no-context returns 0; cross-tenant 0</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>Session</td>
+<td>HMAC-signed cookie; 12-hour expiry</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>Passwords</td>
+<td>scrypt, constant-time verification</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>CSRF</td>
+<td>state-changing forms include session token</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>CSP/headers</td>
+<td>frame-deny, nosniff, same-origin</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>Parent token</td>
+<td>SHA-256 stored; raw token only in link; 90-day expiry</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>Consent gate</td>
+<td>report and parent link blocked after withdrawal</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>Teacher redaction</td>
+<td>no ₹ on teacher dashboard/student; fee-default hidden</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>Parent content</td>
+<td>no risk labels or fee amounts</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>Audit</td>
+<td>report, link, import, intervention, erasure events</td>
+<td>Pass</td>
+</tr>
+<tr>
+<td>Erasure</td>
+<td>pending request with 30-day workflow</td>
+<td>Pass (workflow stub)</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Residual risks.</strong> The WhatsApp provider is stubbed. The parent link is bearer-token based; anyone with the link can view it until expiry. Production needs rate limiting, link revocation UI and a shorter default lifetime. The dev database uses a known password and should never be deployed as-is.</p>
+<h2 id="6-performance-and-reliability">6. Performance and reliability</h2>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Result</th>
+<th>Method</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Dashboard latency</td>
+<td>74 ms</td>
+<td>single authenticated request</td>
+</tr>
+<tr>
+<td>Students page</td>
+<td>58 ms</td>
+<td>200 rows</td>
+</tr>
+<tr>
+<td>Mastery grid</td>
+<td>88 ms</td>
+<td>300 KB HTML</td>
+</tr>
+<tr>
+<td>Risk page</td>
+<td>34 ms</td>
+<td>top 120 rows</td>
+</tr>
+<tr>
+<td>Status page</td>
+<td>27 ms</td>
+<td>model cards</td>
+</tr>
+<tr>
+<td>Dashboard p50 / p95</td>
+<td>99 / 257 ms</td>
+<td>100 requests, 10 workers</td>
+</tr>
+<tr>
+<td>Analytics rebuild</td>
+<td>7.7 s</td>
+<td>3 institutes, 181k responses</td>
+</tr>
+<tr>
+<td>Database size</td>
+<td>156 MB</td>
+<td><code>pg_database_size</code></td>
+</tr>
+</tbody>
+</table>
+<p>The current build is comfortable for a 3-institute pilot. The mastery page is the heaviest; at 10× students it needs pagination or a materialised grid.</p>
+<h2 id="7-failure-modes-and-mitigations">7. Failure modes and mitigations</h2>
+<table>
+<thead>
+<tr>
+<th>Failure</th>
+<th>Current behaviour</th>
+<th>Next step</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Bad CSV</td>
+<td>row-level quarantine; commit blocked until reviewed</td>
+<td>Add downloadable error CSV</td>
+</tr>
+<tr>
+<td>Duplicate upload</td>
+<td>same job returned by content hash</td>
+<td>Show prior commit status clearly</td>
+</tr>
+<tr>
+<td>Analytics crash</td>
+<td>job transaction rolls back; prior snapshots remain</td>
+<td>Add job retry/alerting</td>
+</tr>
+<tr>
+<td>Wrong tenant</td>
+<td>RLS returns zero rows</td>
+<td>Keep tests in CI</td>
+</tr>
+<tr>
+<td>Consent withdrawn</td>
+<td>report/link generation refused</td>
+<td>Add consent expiry reminders</td>
+</tr>
+<tr>
+<td>Parent link leaked</td>
+<td>bearer token valid until expiry</td>
+<td>Add revoke button + shorter TTL</td>
+</tr>
+<tr>
+<td>Model drift</td>
+<td>versioned snapshots</td>
+<td>Monthly backtest + drift alert</td>
+</tr>
+<tr>
+<td>Fee data leaked to teacher</td>
+<td>role filter + template redaction</td>
+<td>Add API-level test</td>
+</tr>
+<tr>
+<td>LLM hallucination</td>
+<td>template path; fact validator</td>
+<td>Keep LLM off until eval set exists</td>
+</tr>
+</tbody>
+</table>
+<h2 id="8-limitations">8. Limitations</h2>
+<ol>
+<li><strong>Synthetic outcomes.</strong> Withdrawal is generated from attendance and fee behaviour, so the model partly learns the generator. AUC 1.0 is not evidence of real-world performance.</li>
+<li><strong>Random split, not time split.</strong> The pilot must validate on future cohorts to avoid leakage.</li>
+<li><strong>Small positive count.</strong> 15–24 positives per institute gives wide confidence intervals.</li>
+<li><strong>Rules are not predictors.</strong> Fee-default and falling-behind scores are triage heuristics.</li>
+<li><strong>No real institute data.</strong> No DPDP notice, DPA or parent consent text has been legally reviewed.</li>
+<li><strong>No native Forms/OMR.</strong> CSV export is the working path; OMR is an adapter point.</li>
+<li><strong>WhatsApp is partial.</strong> Inbound structured entry works; outbound delivery is queued, not sent.</li>
+<li><strong>Single region.</strong> Patna/Bihar pricing and language assumptions are untested.</li>
+</ol>
+<h2 id="9-pilot-plan">9. Pilot plan</h2>
+<p><strong>Design:</strong> 2 institutes, 8 weeks, 300–600 students, one control batch per institute where feasible.</p>
+<table>
+<thead>
+<tr>
+<th>Hypothesis</th>
+<th>Measure</th>
+<th>Success bar</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>H1: flags are actionable</td>
+<td>teacher-rated usefulness of top-20 flags</td>
+<td>≥70% “actionable”</td>
+</tr>
+<tr>
+<td>H2: onboarding is light</td>
+<td>upload → first insight</td>
+<td>&lt;30 minutes</td>
+</tr>
+<tr>
+<td>H3: parents engage</td>
+<td>report open / reply rate</td>
+<td>&gt;60% open, &gt;15% reply</td>
+</tr>
+<tr>
+<td>H4: retention improves</td>
+<td>28-day attendance vs control</td>
+<td>+3 percentage points</td>
+</tr>
+<tr>
+<td>H5: willingness to pay</td>
+<td>signed LOI / paid pilot</td>
+<td>≥₹35/student/month</td>
+</tr>
+</tbody>
+</table>
+<p><strong>Guardrails:</strong> no student-facing risk labels; no exam-rank claims; no fee data to teachers; consent before parent communication; weekly model review; kill switch for reports.</p>
+<p><strong>Decision gate:</strong> proceed to paid rollout only if H1, H2 and H5 pass and no privacy incident occurs.</p>
+<h2 id="10-recommendation">10. Recommendation</h2>
+<p>Proceed to a controlled design-partner pilot. The prototype is strong enough to test workflow, trust and willingness to pay. It is not yet evidence that the risk model predicts real dropout. The next validation must be temporal, on real consented data, with a pre-registered success bar.</p>
+<h2 id="appendix-a-reproduce">Appendix A — Reproduce</h2>
+<pre><code class="language-bash">python3 scripts/apply_migrations.py
+python3 -m app.synth
+python3 -m app.analytics
+python3 -m pytest -q
+uvicorn app.main:app --port 8000
+</code></pre>
+<h2 id="appendix-b-evidence-index">Appendix B — Evidence index</h2>
+<ul>
+<li><code>tests/test_model.py</code>: Rasch recovery, mastery bounds.</li>
+<li><code>tests/test_integration.py</code>: RLS, import quarantine, consent, API roles.</li>
+<li><code>db/tests/rls_smoke.sql</code>: original RLS/job-queue smoke test.</li>
+<li><code>docs/assets/</code>: dashboard, student, report, risk, import and status screenshots.</li>
+<li><code>docs/institute_intelligence_financial_model.xlsx</code>: unit economics and 3-year plan.</li>
+</ul></body></html>

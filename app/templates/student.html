@@ -1,0 +1,217 @@
+{% extends "base.html" %}
+{% block title %}{{ s.full_name }} · Institute Intelligence{% endblock %}
+{% block page_title %}{{ s.full_name }}{% endblock %}
+{% block page_sub %}Roll {{ s.roll_no or '—' }} · {{ s.batch }} · joined {{ s.join_date.strftime('%d %b %Y') }}{% endblock %}
+{% block content %}
+{% if request.query_params.get('err') == 'consent' %}
+<div class="alert">Parent communication consent is not granted for this student. Generate a report only after consent is recorded.</div>
+{% endif %}
+
+<div class="grid" style="grid-template-columns: 1.6fr 1fr">
+  <div class="stack">
+    <div class="card">
+      <div class="between" style="margin-bottom:12px">
+        <div>
+          <h2>Topic mastery</h2>
+          <div class="hint">Rasch ability with empirical-Bayes shrinkage and 120-day recency weighting</div>
+        </div>
+        <span class="badge {{ 'ok' if s.status=='active' else 'gray' }}">{{ s.status }}</span>
+      </div>
+      {% if mastery %}
+      <div style="max-height:420px;overflow:auto">
+        <table>
+          <thead><tr><th>Topic</th><th style="width:38%">Mastery</th><th class="num">Evidence</th></tr></thead>
+          <tbody>
+          {% for m in mastery %}
+            <tr>
+              <td><span class="chip">{{ m.subject }}</span> <span class="strong">{{ m.name }}</span><div class="tiny muted">{{ m.chapter }}</div></td>
+              <td>
+                <div class="prob {{ 'low' if m.mastery_prob>=0.75 else ('medium' if m.mastery_prob>=0.5 else 'high') }}">
+                  <span class="bar"><span style="width: {{ (m.mastery_prob*100)|round(0) }}%"></span></span>
+                  <span class="tiny" style="min-width:34px;text-align:right">{{ (m.mastery_prob*100)|round(0) }}%</span>
+                </div>
+              </td>
+              <td class="num muted">{{ m.evidence_count }}{% if m.evidence_count < 3 %} <span class="badge gray">low</span>{% endif %}</td>
+            </tr>
+          {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% else %}<div class="empty">No mastery snapshots for this student yet.</div>{% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Mock test trend</h2><span class="hint">score %</span></div>
+      {% if trend %}
+      <div class="timeline">
+        {% for t in trend %}
+        <div class="bar" style="height: {{ t.pct|round(0) }}%"><span>{{ t.pct|round(0) }}</span></div>
+        {% endfor %}
+      </div>
+      <div class="trend-labels">
+        {% for t in trend %}<span>{{ t.test_date.strftime('%d %b') }}</span>{% endfor %}
+      </div>
+      {% else %}<div class="empty">No test responses yet.</div>{% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Interventions</h2><span class="hint">teacher-owned actions</span></div>
+      <form method="post" action="/students/{{ s.id }}/interventions" class="flex wrap" style="align-items:end;margin-bottom:12px">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <div style="min-width:150px">
+          <label class="field">Type</label>
+          <select name="type">
+            <option value="mentoring">Mentoring</option>
+            <option value="remedial">Remedial class</option>
+            <option value="parent_call">Parent call</option>
+            <option value="counselling">Counselling</option>
+            <option value="study_plan">Study plan</option>
+            <option value="fee_plan_review">Fee plan review</option>
+          </select>
+        </div>
+        <div style="flex:1;min-width:220px">
+          <label class="field">Note</label>
+          <input class="input" name="notes" placeholder="Short, factual note (optional)">
+        </div>
+        <button class="btn primary" type="submit">Open action</button>
+      </form>
+      {% if interventions %}
+      <div class="list">
+        {% for i in interventions %}
+        <div class="list-row">
+          <div><span class="strong">{{ i.type.replace('_',' ') }}</span> <span class="badge gray">{{ i.status }}</span><div class="tiny muted">{{ i.notes or 'No note' }}</div></div>
+          <div class="tiny muted">{{ i.opened_at.strftime('%d %b %Y') }}</div>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}<div class="note">No interventions opened. Risk scores are decision support, never automatic labels.</div>{% endif %}
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h2>Study plan</h2><span class="hint">retrieved from curated topic briefs</span></div>
+      {% if study_plan %}
+      {% for p in study_plan %}
+      <div style="padding:10px 0;border-bottom:1px solid #eef2f7">
+        <div class="between"><span class="strong">{{ p.name }}</span><span class="badge gray">{{ (p.mastery_prob*100)|round(0) }}% mastery</span></div>
+        <div class="note" style="margin-top:4px">{{ p.concept }}</div>
+        <div class="note" style="margin-top:4px"><b>Practice:</b> {{ p.drill }}</div>
+      </div>
+      {% endfor %}
+      <div class="note" style="margin-top:8px">Retrieved from the institute's curated topic library; composed deterministically. No student data is sent to an external model.</div>
+      {% else %}<div class="empty">No study plan yet.</div>{% endif %}
+    </div>
+  </div>
+
+  <div class="stack">
+    <div class="card">
+      <div class="section-title">Internal percentile band</div>
+      {% if pred %}
+      <div class="flex" style="align-items:baseline;gap:6px">
+        <div style="font-size:34px;font-weight:750;letter-spacing:-0.03em">{{ pred.point|round(0) }}</div>
+        <div class="muted">/ 100</div>
+      </div>
+      <div class="note">80% interval: <b>{{ pred.lower_bound|round(0) }}–{{ pred.upper_bound|round(0) }}</b></div>
+      <div class="note" style="margin-top:8px">Measured coverage on hold-out: {{ (pred.coverage*100)|round(0) }}%. Internal cohort percentile only — not a JEE/NEET rank.</div>
+      <div class="progress" style="margin-top:12px"><span style="width: {{ pred.point|round(0) }}%"></span></div>
+      {% else %}<div class="note">Not enough test history for a band.</div>{% endif %}
+    </div>
+
+    <div class="card">
+      <div class="section-title">Early warning · latest snapshot</div>
+      {% for r in risks %}
+      <div style="padding:10px 0;border-bottom:1px solid #eef2f7">
+        <div class="between">
+          <span class="strong">{{ r.target.replace('_',' ')|capitalize }}</span>
+          <span class="badge {{ r.band }}">{{ r.band }}</span>
+        </div>
+        <div class="note" style="margin-top:4px">Score {{ (r.score*100)|round(0) }} / 100</div>
+        <ul class="note" style="margin:6px 0 0 16px;padding:0">
+          {% for reason in r.reasons[:3] %}<li>{{ reason_text(reason, user.role) }}</li>{% endfor %}
+        </ul>
+      </div>
+      {% else %}<div class="note">No risk snapshot yet.</div>{% endfor %}
+      <div class="note" style="margin-top:10px">Scores support outreach. They are not shared with students or parents as labels.</div>
+    </div>
+
+    {% if user.role in ('owner','admin') %}
+    <div class="card">
+      <div class="section-title">Privacy · erasure</div>
+      {% if deletions %}
+      {% for d in deletions %}
+      <div class="list-row"><span class="badge gray">{{ d.status }}</span><span class="tiny muted">{{ d.created_at.strftime('%d %b %Y') }}</span></div>
+      {% endfor %}
+      {% else %}
+      <div class="note">No erasure request on file.</div>
+      {% endif %}
+      <form method="post" action="/students/{{ s.id }}/deletion-request" style="margin-top:10px">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input class="input" name="notes" placeholder="Verification note (optional)">
+        <button class="btn sm" type="submit" style="margin-top:8px">Log erasure request</button>
+      </form>
+      <div class="note" style="margin-top:8px">DPDP workflow: verify identity, then execute within the committed window. Requests are audited, never silent.</div>
+    </div>
+    {% endif %}
+
+    <div class="card">
+      <div class="section-title">Parent report</div>
+      <div class="flex wrap">
+        <form method="post" action="/students/{{ s.id }}/reports">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="lang" value="en">
+          <button class="btn primary sm" type="submit">Generate English</button>
+        </form>
+        <form method="post" action="/students/{{ s.id }}/reports">
+          <input type="hidden" name="csrf" value="{{ csrf }}"><input type="hidden" name="lang" value="hi">
+          <button class="btn sm" type="submit">हिंदी रिपोर्ट</button>
+        </form>
+      </div>
+      {% if reports %}
+      <div class="list" style="margin-top:10px">
+        {% for rep in reports %}
+        <div class="list-row">
+          <div><a href="/reports/{{ rep.id }}" class="strong">{{ 'Hindi' if rep.language=='hi' else 'English' }}</a> <span class="badge gray">{{ 'Template-generated' if rep.status=='template_fallback' else rep.status.replace('_',' ') }}</span></div>
+          <span class="tiny muted">{{ rep.created_at.strftime('%d %b') }}</span>
+        </div>
+        {% endfor %}
+      </div>
+      {% else %}<div class="note" style="margin-top:8px">No reports yet. Reports use locked facts and a reviewed template; the LLM is optional.</div>{% endif %}
+    </div>
+
+    <div class="card">
+      <div class="section-title">Profile</div>
+      <dl class="dl">
+        <dt>Class</dt><dd>{{ s.class_level }}</dd>
+        <dt>Guardian</dt><dd>{{ s.guardian_name or 'Not recorded' }}</dd>
+        {% if guardian %}<dt>Contact</dt><dd>{% for g in guardian %}{{ g.name }} · {{ g.relationship }}{% if not loop.last %}, {% endif %}{% endfor %}</dd>{% endif %}
+        <dt>Joined</dt><dd>{{ s.join_date.strftime('%d %b %Y') }}</dd>
+        <dt>Exit</dt><dd>{{ s.exit_date.strftime('%d %b %Y') if s.exit_date else '—' }}</dd>
+      </dl>
+    </div>
+
+    {% if fees %}
+    <div class="card">
+      <div class="card-head"><h2>Fees</h2><span class="hint">staff-only</span></div>
+      <table>
+        <thead><tr><th>#</th><th>Due</th><th class="num">Paid</th><th>Status</th></tr></thead>
+        <tbody>
+        {% for f in fees %}
+        <tr><td>{{ f.instalment_no }}</td><td class="muted">{{ f.due_date.strftime('%d %b') }}</td><td class="num">{{ f.amount_paid|inr }} <span class="tiny muted">/ {{ f.amount_due|inr }}</span></td><td><span class="badge {{ 'ok' if f.status=='paid' else 'medium' }}">{{ f.status }}</span></td></tr>
+        {% endfor %}
+        </tbody>
+      </table>
+    </div>
+    {% endif %}
+
+    {% if consents %}
+    <div class="card">
+      <div class="section-title">Consent ledger</div>
+      <div class="list">
+        {% for c in consents %}
+        <div class="list-row"><span class="small">{{ c.purpose.replace('_',' ') }}</span><span class="badge {{ 'ok' if c.status=='granted' else 'medium' }}">{{ c.status }}</span></div>
+        {% endfor %}
+      </div>
+      <div class="note">Purpose-bound consent, withdrawable with downstream propagation. <a href="/status">See privacy controls</a>.</div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}
