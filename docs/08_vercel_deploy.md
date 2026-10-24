@@ -1,5 +1,9 @@
 # Deploying on Vercel
 
+**Live:** https://nextute-data-moat.vercel.app  
+**Vercel project:** `anushkaouis-projects/nextute-data-moat`  
+**Database:** Supabase project `llexupubzkadeulusoaf` (synthetic data only)
+
 Vercel can run this FastAPI app as a Python Function, but it **cannot** host the Postgres database. The current `localhost:55432` Docker database is development-only. For Vercel you need a hosted Postgres (Neon, Supabase, Railway, etc.) and two environment variables.
 
 ## What Vercel runs

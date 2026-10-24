@@ -79,8 +79,8 @@ def require(request: Request):
 
 def page(request, name, **ctx):
     payload = session_of(request)
-    return templates.TemplateResponse(name, {
-        "request": request, "user": payload,
+    return templates.TemplateResponse(request, name, {
+        "user": payload,
         "csrf": payload["csrf"] if payload else "",
         **ctx,
     })
@@ -619,8 +619,8 @@ def parent_view(request: Request, token: str, lang: str = "en"):
         conn.close()
     if not report:
         raise HTTPException(404, "report not available yet")
-    return templates.TemplateResponse("parent.html", {
-        "request": request, "report": report, "lang": report["language"], "user": None,
+    return templates.TemplateResponse(request, "parent.html", {
+        "report": report, "lang": report["language"], "user": None,
         "csrf": "", "token": token,
     })
 

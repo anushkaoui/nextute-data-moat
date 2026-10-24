@@ -42,6 +42,12 @@ uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 
 Open <http://127.0.0.1:8000/login>.
 
+## Live demo
+
+**https://nextute-data-moat.vercel.app**
+
+The app runs on Vercel with a Supabase Postgres database. The data is the synthetic pilot dataset (1,000 students, 181k responses); no real student data is present.
+
 ## Demo accounts
 
 | Role | Email | Password | What to show |
@@ -100,6 +106,8 @@ docs/              validation report, deck, business plan, Q&A
 - The optional LLM path is off; reports use the reviewed template and fact-lock validator.
 
 ## Deploy on Vercel
+
+Live deployment: <https://nextute-data-moat.vercel.app>
 
 See `docs/08_vercel_deploy.md`. Vercel runs the FastAPI app, but you must supply a hosted Postgres URL and `SESSION_SECRET`. The local Docker database is not available inside Vercel.
 
