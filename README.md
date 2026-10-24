@@ -121,5 +121,6 @@ See `docs/08_vercel_deploy.md`. Vercel runs the FastAPI app, but you must supply
 - `docs/06_qna.md` — objection handling
 - `docs/07_traceability.md` — requirement and rubric map
 - `docs/08_vercel_deploy.md` — Vercel deployment runbook
+- `docs/09_case_brief_answers.md` — answers to the eight case-brief questions
 - `docs/early_model_results.md` — reproducible early-model artefact
 - `docs/institute_intelligence_financial_model.xlsx` — editable financial model
