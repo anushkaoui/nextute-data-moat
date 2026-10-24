@@ -53,6 +53,7 @@ def generate(seed: int = 20260401, reset: bool = True, verbose: bool = True):
                 admin.execute("truncate table institute cascade")
             counts = {"students": 0, "responses": 0, "attendance": 0}
             for inst_id, name, city, state, tier, exam, n_students in INSTITUTES:
+                print(f"seeding {name} ({n_students} students)", flush=True)
                 institute_id = uuid.UUID(inst_id)
                 admin.execute(
                     "insert into institute (id, name, city, state, city_tier, exam_focus, plan, student_capacity) "
@@ -133,8 +134,11 @@ def generate(seed: int = 20260401, reset: bool = True, verbose: bool = True):
                             else:
                                 resp = rnd.choice([x for x in "ABCD" if x != it["key"]])
                             resp_rows.append((institute_id, test_id, s["id"], ti_id, resp, it["key"]))
+                print(f"  responses: {len(resp_rows):,}", flush=True)
                 counts["responses"] += insert_responses(admin, institute_id, resp_rows)
+                print("  attendance", flush=True)
                 counts["attendance"] += seed_attendance(admin, institute_id, students, sessions, rnd)
+                print("  fees + consent + content", flush=True)
                 seed_fees(admin, institute_id, students, rnd)
                 seed_consents(admin, institute_id, students, rnd)
                 seed_content(admin, institute_id, topics)
@@ -267,11 +271,12 @@ def seed_attendance(admin, institute_id, students, sessions, rnd):
                 p = 0.40
             status = "present" if rnd.random() < p else "absent"
             rows.append((institute_id, sid, s["id"], status))
-    _executemany(admin, 
-        "insert into attendance_record (institute_id, session_id, student_id, status, source) "
-        "values (%s,%s,%s,%s,'import') on conflict do nothing",
-        rows,
-    )
+    with admin.cursor() as cur:
+        with cur.copy(
+            "copy attendance_record (institute_id, session_id, student_id, status, source) from stdin"
+        ) as copy:
+            for iid, sid, student_id, status in rows:
+                copy.write_row((str(iid), str(sid), str(student_id), status, "import"))
     return len(rows)
 
 
@@ -343,19 +348,23 @@ def seed_content(admin, institute_id, topics):
 
 
 def insert_responses(admin, institute_id, rows):
+    import json
     payload = []
     for inst, test_id, student_id, ti_id, resp, key in rows:
         if resp is None:
-            payload.append((institute_id, test_id, student_id, ti_id, None, None, None, "omr", 1.0))
+            payload.append((str(institute_id), str(test_id), str(student_id), str(ti_id),
+                            None, None, None, "omr", 1.0))
         else:
             correct = resp == key
-            payload.append((institute_id, test_id, student_id, ti_id, Jsonb({"choice": resp}),
-                            correct, 4 if correct else -1, "omr", 0.95))
-    _executemany(admin, 
-        "insert into response (institute_id, test_id, student_id, test_item_id, raw_response, is_correct, "
-        "marks_awarded, source, confidence) values (%s,%s,%s,%s,%s,%s,%s,%s,%s)",
-        payload,
-    )
+            payload.append((str(institute_id), str(test_id), str(student_id), str(ti_id),
+                            json.dumps({"choice": resp}), correct, 4 if correct else -1, "omr", 0.95))
+    with admin.cursor() as cur:
+        with cur.copy(
+            "copy response (institute_id, test_id, student_id, test_item_id, raw_response, "
+            "is_correct, marks_awarded, source, confidence) from stdin"
+        ) as copy:
+            for row in payload:
+                copy.write_row(row)
     return len(payload)
 
 

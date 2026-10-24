@@ -1,0 +1,12 @@
+.git
+.env*
+.pytest_cache
+__pycache__
+*.py[cod]
+*.zip
+docs
+notebooks
+tests
+scripts
+data
+demo

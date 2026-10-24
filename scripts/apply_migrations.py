@@ -12,7 +12,7 @@ ADMIN_URL = os.environ.get(
 
 
 def main():
-    conn = psycopg.connect(ADMIN_URL)
+    conn = psycopg.connect(ADMIN_URL, autocommit=True, prepare_threshold=None)
     try:
         exists = conn.execute("select to_regclass('public.schema_migration')").fetchone()[0]
         applied = set()
